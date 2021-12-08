@@ -1,0 +1,123 @@
+name: Node-CI
+
+on: 
+  push:
+    branches: [ master, develop ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    if: "contains(github.event.head_commit.message, '[update]')"
+    
+    steps:
+      - name: Copy code files to container
+        uses: actions/checkout@v2
+
+      - name: Install Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: '12.x'
+
+      - name: Install npm dependencies
+        run: npm install
+
+  deploy-master:
+
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.ref == 'refs/heads/master'
+
+    steps:
+      - name: Copy code files to container
+        uses: actions/checkout@v2
+
+      - name: Environment preparation
+        run: |
+          mkdir -p ~/.ssh/
+          touch ~/.ssh/id_rsa
+          chmod -R go= ~/.ssh
+          chmod 600 ~/.ssh/id_rsa
+          echo "${{ secrets.SERVER_SSH_KEY }}" >> ~/.ssh/id_rsa          
+          sudo apt-add-repository -y -u ppa:ansible/ansible          
+          sudo apt-get install -y rsync
+          sudo apt-get install -y ansible
+      
+      - name: Deploy to Server
+        run: |  
+          chmod 700 ci-scripts
+          cd ci-scripts          
+          ansible-playbook -i "${{ secrets.REMOTE_HOST }}" -e "ansible_user=${{ secrets.REMOTE_USER }} \
+            backend_bin=${{ secrets.BACKEND_BIN }} \
+            SERVER_PORT=${{ secrets.SERVER_PORT }} \
+            DFUSE_APIKEY=${{ secrets.DFUSE_APIKEY }} \
+            DFUSE_APIKEY_EOSNATIVE=${{ secrets.DFUSE_APIKEY_EOSNATIVE }} \
+            AUTH_ENDPOINT=${{ secrets.AUTH_ENDPOINT }} \
+            BASE_ENDPOINT=${{ secrets.BASE_ENDPOINT }} \
+            DFUSE_API_NETWORK=${{ secrets.DFUSE_API_NETWORK }} \
+            CONTRACT_ADDRESS=${{ secrets.CONTRACT_ADDRESS }} \
+            CONTRACT_ADDRESS_TOKEN=${{ secrets.CONTRACT_ADDRESS_TOKEN }} \
+            ISSUER_CFT_ACCOUNT=${{ secrets.ISSUER_CFT_ACCOUNT }} \
+            BASE_ACCOUNT=${{ secrets.BASE_ACCOUNT }} \
+            CRYPTO_KEY=${{ secrets.CRYPTO_KEY }} \
+            DB_DATABASE=${{ secrets.DB_DATABASE }} \
+            DB_USER=${{ secrets.DB_USER }} \
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
+            DB_SOURCE=${{ secrets.DB_SOURCE }} \
+            TOKEN_MANAGER_KEY_EOS=${{ secrets.TOKEN_MANAGER_KEY_EOS }} \
+            process_gateway=${{ secrets.PROCESS_GATEWAY }} \
+            process_filter_eos=${{ secrets.PROCESS_FILTER_EOS }} \
+            process_ipn=${{ secrets.PROCESS_IPN }} \
+            BASE_NAME_CURRENCY=${{ secrets.BASE_NAME_CURRENCY }} \
+            TOKEN_NAME_CURRENCY=${{ secrets.TOKEN_NAME_CURRENCY }} \
+            SRC_DIR=${{ github.workspace }}/" backend-update.yml;
+
+  deploy-develop:
+
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.ref == 'refs/heads/develop'
+    
+    steps:
+      - name: Copy code files to container
+        uses: actions/checkout@v2
+
+      - name: Environment preparation
+        run: |
+          mkdir -p ~/.ssh/
+          touch ~/.ssh/id_rsa
+          chmod -R go= ~/.ssh
+          chmod 600 ~/.ssh/id_rsa
+          echo "${{ secrets.SERVER_SSH_KEY }}" >> ~/.ssh/id_rsa          
+          sudo apt-add-repository -y -u ppa:ansible/ansible          
+          sudo apt-get install -y rsync
+          sudo apt-get install -y ansible
+      
+      - name: Deploy to Server
+        run: |  
+          chmod 700 ci-scripts
+          cd ci-scripts          
+          ansible-playbook -i "${{ secrets.REMOTE_HOST }}" -e "ansible_user=${{ secrets.REMOTE_USER }} \
+            backend_bin=${{ secrets.BACKEND_BIN_TEST }} \
+            SERVER_PORT=${{ secrets.SERVER_PORT_TEST }} \
+            DFUSE_APIKEY=${{ secrets.DFUSE_APIKEY_TEST }} \
+            DFUSE_APIKEY_EOSNATIVE=${{ secrets.DFUSE_APIKEY_EOSNATIVE_TEST }} \
+            AUTH_ENDPOINT=${{ secrets.AUTH_ENDPOINT_TEST }} \
+            BASE_ENDPOINT=${{ secrets.BASE_ENDPOINT_TEST }} \
+            DFUSE_API_NETWORK=${{ secrets.DFUSE_API_NETWORK_TEST }} \
+            CONTRACT_ADDRESS=${{ secrets.CONTRACT_ADDRESS_TEST }} \
+            CONTRACT_ADDRESS_TOKEN=${{ secrets.CONTRACT_ADDRESS_TOKEN_TEST }} \
+            ISSUER_CFT_ACCOUNT=${{ secrets.ISSUER_CFT_ACCOUNT_TEST }} \
+            BASE_ACCOUNT=${{ secrets.BASE_ACCOUNT_TEST }} \
+            CRYPTO_KEY=${{ secrets.CRYPTO_KEY_TEST }} \
+            DB_DATABASE=${{ secrets.DB_DATABASE_TEST }} \
+            DB_USER=${{ secrets.DB_USER_TEST }} \
+            DB_PASSWORD=${{ secrets.DB_PASSWORD_TEST }} \
+            DB_SOURCE=${{ secrets.DB_SOURCE_TEST }} \
+            TOKEN_MANAGER_KEY_EOS=${{ secrets.TOKEN_MANAGER_KEY_EOS_TEST }} \
+            process_gateway=${{ secrets.PROCESS_GATEWAY_TEST }} \
+            process_filter_eos=${{ secrets.PROCESS_FILTER_EOS_TEST }} \
+            process_ipn=${{ secrets.PROCESS_IPN_TEST }} \
+            BASE_NAME_CURRENCY=${{ secrets.BASE_NAME_CURRENCY_TEST}} \
+            TOKEN_NAME_CURRENCY=${{ secrets.TOKEN_NAME_CURRENCY_TEST }} \
+            SRC_DIR=${{ github.workspace }}/" backend-update.yml;

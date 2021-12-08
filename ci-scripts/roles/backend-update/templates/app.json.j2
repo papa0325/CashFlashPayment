@@ -1,0 +1,36 @@
+{
+  "apps": [
+      {
+          "name": "{{ process_gateway }}",
+          "exec_mode": "fork",
+          "instances": "1",
+          "script": "app.js",          
+          "autorestart": true,
+          "env": {
+              "ENV": "prod"              
+          }
+      },
+      {
+        "name": "{{ process_filter_eos }}",
+        "exec_mode": "fork",
+        "instances": "1",
+        "script": "./bin/filters/eos.js",          
+        "autorestart": true,
+        "env": {
+            "ENV": "prod"              
+        }
+        
+    },
+        {
+        "name": "{{ process_ipn }}",
+        "exec_mode": "fork",
+        "instances": "1",
+        "script": "./bin/services/ipn.js",          
+        "autorestart": true,
+        "env": {
+            "ENV": "prod"              
+        }
+        
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+---
+# tasks file for backend-update
+- name: Stop backend platform process
+  shell: pm2 stop app.json
+  ignore_errors: yes
+
+- name: Delete backend dir
+  file:
+    path: '{{ backend_bin }}'
+    state: absent
+
+- name: Create backend dir
+  file:
+    path: '{{ backend_bin }}'
+    state: directory
+    recurse: yes
+
+- name: Upload backend files
+  synchronize:
+    src: '{{ SRC_DIR }}'
+    dest: '{{ backend_bin }}'
+  register: copyfiles
+
+- name: Install packages based on package.json
+  npm:
+    path: '{{ backend_bin }}'
+    state: present
+
+- name: Copy or generate env file
+  template:
+    src: ./{{ backend_env }}.j2
+    dest: '{{ backend_bin }}/{{ backend_env }}'
+
+- name: Copy or generate app.json file
+  template:
+    src: ./{{ backend_app_json }}.j2
+    dest: '{{ backend_bin }}/{{ backend_app_json }}'
+
+
+- name: Start backend process
+  shell: pm2 start app.json
+  args:
+    chdir: '{{ backend_bin }}'
+
+- name: Saving current process list
+  shell: pm2 save
+  args:
+    chdir: '{{ backend_bin }}'
